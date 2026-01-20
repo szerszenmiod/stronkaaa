@@ -1,0 +1,15 @@
+<div class="rangi-grid-section" id="rangi-grid">
+  <div class="container">
+    <div class="section-header animate-in">
+      <h2 class="section-title">Dostępne rangi</h2>
+      <p class="section-subtitle">Wybierz rangę idealną dla Ciebie</p>
+    </div>
+    
+    <div class="rangi-grid" id="rangiGrid">
+      {% assign rangi = collections['rangi'].products %}
+      {% for product in rangi %}
+        {% render 'ranga-card', product: product %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
