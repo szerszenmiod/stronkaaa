@@ -1,0 +1,72 @@
+{%- liquid
+  assign luckperms_group = product.metafields.rank.luckperms_group.value
+  assign color = product.metafields.rank.color.value
+  assign glow = product.metafields.rank.glow.value
+  assign bestseller = product.metafields.rank.bestseller.value
+  assign benefits = product.metafields.rank.benefits.value
+  assign icon = product.metafields.rank.icon.value
+-%}
+
+<div class="ranga-card animate-in" 
+     data-product-id="{{ product.id }}"
+     data-price="{{ product.price | money_without_currency }}"
+     data-group="{{ luckperms_group }}"
+     {% if bestseller %}data-bestseller="true"{% endif %}>
+  
+  <div class="ranga-card__inner">
+    <div class="ranga-card__header">
+      {% if icon %}
+        <img src="{{ icon | image_url: width: 64 }}" alt="{{ product.title }}" class="ranga-icon">
+      {% endif %}
+      
+      {% if bestseller %}
+        <div class="bestseller-badge">🔥 BESTSELLER</div>
+      {% endif %}
+    </div>
+    
+    <div class="ranga-card__body">
+      <h3 class="ranga-title" style="color: {{ color }}">{{ product.title }}</h3>
+      
+      <div class="ranga-price">
+        {{ product.price | money }}
+        {% if product.compare_at_price > product.price %}
+          <span class="old-price">{{ product.compare_at_price | money }}</span>
+        {% endif %}
+      </div>
+      
+      <div class="ranga-benefits">
+        {% if benefits %}
+          {% for benefit in benefits %}
+            <div class="benefit-item">{{ benefit }}</div>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="ranga-card__footer">
+      <div class="minecraft-nick-input-wrapper">
+        <input type="text" 
+               class="minecraft-nick-input" 
+               placeholder="Twój nick Minecraft"
+               data-product="{{ product.id }}"
+               maxlength="16">
+        <div class="nick-error" style="display: none;">Nieprawidłowy nick</div>
+      </div>
+      
+      <button class="btn-primary ranga-buy-btn" 
+              data-product="{{ product.id }}"
+              data-group="{{ luckperms_group }}"
+              {% if product.selling_plan_allocations.size > 0 %}disabled{% endif %}>
+        {% if product.available %}
+          Kup teraz
+        {% else %}
+          Brak w magazynie
+        {% endif %}
+      </button>
+    </div>
+    
+    {% if glow %}
+      <div class="ranga-glow" style="--glow-color: {{ color }}"></div>
+    {% endif %}
+  </div>
+</div>
