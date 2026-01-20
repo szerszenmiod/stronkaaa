@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PremiumMC Admin Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%); }
+  </style>
+</head>
+<body class="min-h-screen text-white">
+  <div class="container mx-auto px-4 py-8 max-w-6xl">
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-4">
+        PremiumMC Admin Panel
+      </h1>
+      <p class="text-xl text-gray-300">Zarządzanie zakupami rang</p>
+    </div>
+
+    <div id="loginForm" class="max-w-md mx-auto mb-8">
+      <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
+        <div class="mb-6">
+          <label class="block text-sm font-medium mb-2">Login</label>
+          <input type="text" id="username" class="w-full p-4 bg-white/5 border border-white/20 rounded-xl focus:outline-none focus:border-purple-400 transition-all">
+        </div>
+        <div class="mb-6">
+          <label class="block text-sm font-medium mb-2">Hasło</label>
+          <input type="password" id="password" class="w-full p-4 bg-white/5 border border-white/20 rounded-xl focus:outline-none focus:border-purple-400 transition-all">
+        </div>
+        <button onclick="login()" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 px-6 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-xl">
+          Zaloguj się
+        </button>
+      </div>
+    </div>
+
+    <div id="purchasesSection" class="hidden">
+      <div class="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/20 p-8 mb-8">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Lista zakupów</h2>
+          <button onclick="refreshData()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-xl font-semibold transition-all">
+            🔄 Odśwież
+          </button>
+        </div>
+        
+        <div class="overflow-x-auto">
+          <table id="purchasesTable" class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-white/20">
+                <th class="text-left py-4">Order ID</th>
+                <th class="text-left py-4">Nick</th>
+                <th class="text-left py-4">Ranga</th>
+                <th class="text-left py-4">Status</th>
+                <th class="text-left py-4">Data</th>
+                <th class="text-left py-4 w-32">Akcje</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      
+      <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-xl font-semibold transition-all ml-auto block">
+        Wyloguj się
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let isAuthenticated = false;
+    
+    async function login() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      
+      const response = await fetch('/api/purchases', {
+        headers: {
+          'Authorization': 'Basic ' + btoa(username + ':' + password)
+        }
+      });
+      
+      if (response.ok) {
+        localStorage.setItem('premiummc_admin', 'true');
+        isAuthenticated = true;
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('purchasesSection').classList.remove('hidden');
+        refreshData();
+      } else {
+        alert('Błędny login lub hasło');
+      }
+    }
+    
+    async function refreshData() {
+      const response = await fetch('/api/purchases', {
+        headers: {
+          'Authorization': 'Basic ' + btoa(localStorage.getItem('premiummc_admin_user') || 'admin:admin')
+        }
+      });
+      
+      if (!response.ok) {
+        logout();
+        return;
+      }
+      
+      const purchases = await response.json();
+      renderTable(purchases);
+    }
+    
+    function renderTable(purchases) {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      
+      purchases.forEach(purchase => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-white/10 hover:bg-white/5 transition-all';
+        row.innerHTML = `
+          <td class="py-4 font-mono text-sm">${purchase.order_id}</td>
+          <td class="py-4 font-mono">${purchase.nick}</td>
+          <td class="py-4">
+            <span class="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs font-semibold">
+              ${purchase.rank}
+            </span>
+          </td>
+          <td class="py-4">
+            <span class="px-3 py-1 rounded-full text-xs font-semibold ${
+              purchase.status === 'completed' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+              purchase.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+              'bg-red-500/20 text-red-400 border border-red-500/30'
+            }">
+              ${purchase.status === 'completed' ? '✅' : 
+                purchase.status === 'pending' ? '⏳' : '❌'} ${purchase.status}
+            </span>
+          </td>
+          <td class="py-4 text-sm text-gray-400">${new Date(purchase.created_at).toLocaleString('pl-PL')}</td>
+          <td class="py-4">
+            ${purchase.status === 'pending' || purchase.status === 'failed' ?
+              `<button onclick="retryRank('${purchase.order_id}', '${purchase.nick}', '${purchase.rank}')" 
+                      class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded-lg text-xs font-semibold transition-all">
+                🔄 Retry
+              </button>` : ''}
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+    
+    async function retryRank(orderId, nick, rank) {
+      if (confirm(`Ponowić nadanie rangi ${rank} dla ${nick}?`)) {
+        // Tutaj można dodać endpoint do retry
+        alert('Retry wysłany! (implementacja w backendzie)');
+        refreshData();
+      }
+    }
+    
+    function logout() {
+      localStorage.removeItem('premiummc_admin');
+      isAuthenticated = false;
+      document.getElementById('loginForm').classList.remove('hidden');
+      document.getElementById('purchasesSection').classList.add('hidden');
+    }
+    
+    // Auto-login check
+    if (localStorage.getItem('premiummc_admin')) {
+      isAuthenticated = true;
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('purchasesSection').classList.remove('hidden');
+      refreshData();
+    }
+    
+    // Refresh co 30 sekund
+    setInterval(refreshData, 30000);
+  </script>
+</body>
+</html>
